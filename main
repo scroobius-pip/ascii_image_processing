@@ -1,0 +1,148 @@
+import java.util.Arrays;
+
+String high = "234567890abcdefghijklmnopqrstuvwxyz$@%8&0#qynfi{])";
+String[] imageFiles = {"zeus.jpg",
+"mary.jpg",
+"lain.jpg",
+"marilyn_cro.jpg",
+"redhaired_smiling.jpg"
+};
+String low = "?.,  ^*/";
+float TEXT_SIZE = 10;
+PImage[] images ;
+
+char[] ascii_image;
+int currentImageIndex = 0;
+int nextImageIndex = 0;
+int tStart;
+int tEnd;
+
+
+void setup() {
+  clear();
+  textSize(TEXT_SIZE);
+  noStroke();
+  images = loadImages(imageFiles,1080,1080);
+  //ascii_image = generateImageAscii_(images[0].height, images[0].width);
+  size(1080, 1080);
+  //still();
+  //saveFrame();
+}
+
+void draw() {
+//still();
+animated();
+}
+
+void still(){
+  clear();
+  PImage startImg = images[0];
+ 
+
+  float[] pixelOpacitiesStart = getImagePixelOpacity(startImg);
+ascii_image = generateImageAscii(startImg,pixelOpacitiesStart);
+  drawAsciiWithOpacity(pixelOpacitiesStart, ascii_image, startImg.width,startImg.height);
+}
+int frameJump = 31;
+void animated(){
+  clear();
+
+  if (frameCount%frameJump==0) {
+    currentImageIndex = (frameCount)%(images.length);
+    nextImageIndex = (frameCount+frameJump)%(images.length);
+  }
+  PImage startImg = images[currentImageIndex];
+  PImage endImg = images[nextImageIndex];
+
+  float[] pixelOpacitiesStart = getImagePixelOpacity(startImg);
+  float[] pixelOpacitiesEnd = getImagePixelOpacity(endImg);
+
+  float[] interpolatedPixelOpacities = interpolatePixelOpacities(pixelOpacitiesStart, pixelOpacitiesEnd, 0, frameJump, frameCount%frameJump);
+  ascii_image = generateImageAscii(startImg, interpolatedPixelOpacities);
+  drawAsciiWithOpacity(interpolatedPixelOpacities, ascii_image, 1080, 1080);
+}
+
+float[] interpolatePixelOpacities(float[] pixelOpacityStart, float[] pixelOpacityEnd, int tStart, int tEnd, int tCurrent) {
+  float[] currentPixelOpacities = new float[pixelOpacityStart.length];
+  for (int i = 0; i<pixelOpacityStart.length; i++) {
+    float y1 = pixelOpacityStart[i];
+    float y2 = pixelOpacityEnd[i];
+    float currentOpacity = map(tCurrent, tStart, tEnd, y1, y2);
+    currentPixelOpacities[i] = currentOpacity;
+  }
+
+  return currentPixelOpacities;
+}
+
+float[] getImagePixelOpacity(PImage img) {
+  float[] pixelOpacities = new float[img.width*img.height];
+
+  img.loadPixels();
+
+  for (int x=0; x<img.width; x++) {
+    for (int y=0; y<img.height; y++) {
+      int index = x+y*img.width;
+      int pixel = img.pixels[index];
+      float lux = brightness(pixel);
+      pixelOpacities[index] = lux;
+    }
+  }
+  return pixelOpacities;
+}
+
+char[] generateImageAscii(PImage img, float[] pixelOpacities) {
+  char[] generatedAscii = new char[img.width*img.height];
+  for (int x=0; x<img.width; x++) {
+    for (int y=0; y<img.height; y++) {
+      int index = x+y*img.width;
+      String ascii = pixelOpacities[index] > 150 ? high:low;
+      int randInt = (int)random(0, ascii.length());
+      char randomAscii =  ascii.charAt(randInt);
+      generatedAscii[x+y*img.width] = randomAscii;
+    }
+  }
+  return generatedAscii;
+}
+
+char[] generateImageAscii_(int width, int height) {
+  char[] generatedAscii = new char[width*height];
+  for (int x=0; x<width; x++) {
+    for (int y=0; y<height; y++) {
+      int index = x+y*width;
+      String ascii = high;
+      int randInt = (int)random(0, ascii.length());
+      char randomAscii =  ascii.charAt(randInt);
+      generatedAscii[x+y*width] = randomAscii;
+    }
+  }
+  return generatedAscii;
+}
+int getImageArraySize(PImage img) {
+  return (int)((img.width/TEXT_SIZE)*(img.height/TEXT_SIZE));
+}
+
+void drawAsciiWithOpacity(float[] pixelOpacities, char[] generatedAscii, int width, int height) {
+
+  for (int x = 0; x<width; x+=TEXT_SIZE) {
+    for (int y = 0; y<height; y+= TEXT_SIZE) {
+      int index = x+y*width;
+
+      float currentOpacity = pixelOpacities[index];
+      char currentChar =  generatedAscii[index];
+
+      fill(currentOpacity);
+
+      text(currentChar, x, y);
+    }
+  }
+}
+
+PImage[] loadImages(String[] files,int width, int height) {
+  PImage[] images = new PImage[files.length];
+  for (int x = 0; x < files.length; x++) {
+    PImage image = loadImage(files[x]);
+    image.resize( width,height);
+    images[x] = image;
+  }
+  return images;
+}
